@@ -1,6 +1,7 @@
 'use client'
 
 import { apiRequest, ApiResponse } from '@/lib/api-client'
+import { PrettyResponse } from '@/components/common/PrettyResponse'
 
 type CareerPanelProps = {
     token: string
@@ -82,7 +83,8 @@ function renderCareerResult(data: unknown) {
                     {Object.entries(obj).map(([k, v]) => (
                         <div key={k} className='metric'>
                             <span>{k.replace(/_/g, ' ')}</span>
-                            <p>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</p>
+                            <p>{typeof v === 'object' ? '' : String(v)}</p>
+                            {typeof v === 'object' && <PrettyResponse data={v} compact />}
                         </div>
                     ))}
                 </div>
@@ -141,10 +143,7 @@ export function CareerPanel({ token, roleName, setRoleName, loading, runAction, 
                             <span className='muted' style={{ fontSize: 11 }}>{new Date(entry.at).toLocaleTimeString()}</span>
                         </div>
                         {renderCareerResult(entry.data) || (
-                            <details className='details-block' open>
-                                <summary>View Response</summary>
-                                <pre className='code-block'>{JSON.stringify(entry.data, null, 2)}</pre>
-                            </details>
+                            <PrettyResponse data={entry.data} />
                         )}
                     </div>
                 ))

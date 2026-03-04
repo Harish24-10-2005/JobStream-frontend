@@ -12,6 +12,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang='en'>
       <head>
         <meta name='viewport' content='width=device-width, initial-scale=1' />
+        <link rel='preconnect' href='https://fonts.googleapis.com' />
+        <link rel='preconnect' href='https://fonts.gstatic.com' crossOrigin='anonymous' />
+        <link
+          href='https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'
+          rel='stylesheet'
+        />
         <link rel='icon' href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="%23ff8a1f"/><text x="50%25" y="55%25" dominant-baseline="middle" text-anchor="middle" fill="%23111" font-size="16" font-weight="bold" font-family="sans-serif">JS</text></svg>' />
       </head>
       <body>{children}</body>

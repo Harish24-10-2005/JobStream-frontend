@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 type PanelKey =
     | 'pipeline'
     | 'live'
@@ -15,21 +17,53 @@ type PanelKey =
     | 'test'
     | 'analytics'
 
-const NAV_ITEMS: Array<{ key: PanelKey; icon: string; label: string }> = [
-    { key: 'pipeline', icon: '🔄', label: 'Pipeline' },
-    { key: 'live', icon: '⚡', label: 'Live Agent' },
-    { key: 'jobs', icon: '🔍', label: 'Job Search' },
-    { key: 'resume', icon: '📄', label: 'Resume Studio' },
-    { key: 'cover', icon: '✉️', label: 'Cover Letter' },
-    { key: 'company', icon: '🏢', label: 'Company Intel' },
-    { key: 'interview', icon: '🎯', label: 'Interview Prep' },
-    { key: 'tracker', icon: '📊', label: 'Tracker' },
-    { key: 'network', icon: '🤝', label: 'Referrals' },
-    { key: 'career', icon: '🚀', label: 'Career Paths' },
-    { key: 'profile', icon: '👤', label: 'My Profile' },
-    { key: 'test', icon: '🧪', label: 'Test Dashboard' },
-    { key: 'analytics', icon: '📈', label: 'Analytics' },
+type NavSection = {
+    label: string
+    items: Array<{ key: PanelKey; icon: string; label: string; badge?: string }>
+}
+
+const NAV_SECTIONS: NavSection[] = [
+    {
+        label: 'Automation',
+        items: [
+            { key: 'pipeline', icon: '🔄', label: 'Pipeline' },
+            { key: 'live', icon: '⚡', label: 'Live Agent' },
+        ],
+    },
+    {
+        label: 'Research',
+        items: [
+            { key: 'jobs', icon: '🔍', label: 'Job Search' },
+            { key: 'company', icon: '🏢', label: 'Company Intel' },
+            { key: 'career', icon: '🚀', label: 'Career Paths' },
+        ],
+    },
+    {
+        label: 'Preparation',
+        items: [
+            { key: 'resume', icon: '📄', label: 'Resume Studio' },
+            { key: 'cover', icon: '✉️', label: 'Cover Letter' },
+            { key: 'interview', icon: '🎯', label: 'Interview Prep' },
+        ],
+    },
+    {
+        label: 'Tracking',
+        items: [
+            { key: 'tracker', icon: '📊', label: 'Tracker' },
+            { key: 'network', icon: '🤝', label: 'Referrals' },
+            { key: 'analytics', icon: '📈', label: 'Analytics' },
+        ],
+    },
+    {
+        label: 'Account',
+        items: [
+            { key: 'profile', icon: '👤', label: 'My Profile' },
+            { key: 'test', icon: '🧪', label: 'Diagnostics' },
+        ],
+    },
 ]
+
+const NAV_ITEMS = NAV_SECTIONS.flatMap((s) => s.items)
 
 type SidebarProps = {
     activePanel: PanelKey
@@ -38,36 +72,79 @@ type SidebarProps = {
 }
 
 export function Sidebar({ activePanel, onPanelChange, userEmail }: SidebarProps) {
+    const [hoveredKey, setHoveredKey] = useState<PanelKey | null>(null)
+
+    // Find which section contains the active panel
+    const activeSectionLabel = NAV_SECTIONS.find(s => s.items.some(i => i.key === activePanel))?.label
+
     return (
         <aside className='sidebar'>
-            <div className='brand-block'>
-                <div className='brand-icon'>JS</div>
-                <div>
-                    <p className='brand-title'>JobStream</p>
-                    <p className='brand-sub'>AI Career Command Center</p>
+            {/* ── Brand ── */}
+            <div className='sidebar-brand'>
+                <div className='brand-block'>
+                    <div className='brand-icon'>JS</div>
+                    <div>
+                        <p className='brand-title'>JobStream</p>
+                        <p className='brand-sub'>AI Career Command Center</p>
+                    </div>
                 </div>
             </div>
 
-            <button className='sidebar-cta' onClick={() => onPanelChange('pipeline')}>
-                + New Session
-            </button>
+            {/* ── CTA ── */}
+            <div className='sidebar-cta-wrap'>
+                <button className='sidebar-cta' onClick={() => onPanelChange('pipeline')}>
+                    <span className='cta-icon'>＋</span>
+                    New Session
+                </button>
+            </div>
 
+            {/* ── Scrollable nav ── */}
             <nav className='sidebar-nav'>
-                {NAV_ITEMS.map((item) => (
-                    <button
-                        key={item.key}
-                        className={`sidebar-link ${activePanel === item.key ? 'active' : ''}`}
-                        onClick={() => onPanelChange(item.key)}
-                    >
-                        <span className='nav-icon'>{item.icon}</span>
-                        {item.label}
-                    </button>
-                ))}
+                <div className='sidebar-scroll'>
+                    {NAV_SECTIONS.map((section) => (
+                        <div key={section.label} className='nav-section'>
+                            <div className={`nav-section-label ${section.label === activeSectionLabel ? 'section-active' : ''}`}>
+                                {section.label}
+                            </div>
+                            <div className='nav-section-items'>
+                                {section.items.map((item) => {
+                                    const isActive = activePanel === item.key
+                                    const isHovered = hoveredKey === item.key
+                                    return (
+                                        <button
+                                            key={item.key}
+                                            className={`sidebar-link ${isActive ? 'active' : ''}`}
+                                            onClick={() => onPanelChange(item.key)}
+                                            onMouseEnter={() => setHoveredKey(item.key)}
+                                            onMouseLeave={() => setHoveredKey(null)}
+                                        >
+                                            <span className='nav-icon'>{item.icon}</span>
+                                            <span className='nav-label'>{item.label}</span>
+                                            {item.badge && <span className='nav-badge'>{item.badge}</span>}
+                                            {isActive && <span className='active-dot' />}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </nav>
 
+            {/* ── Footer ── */}
             <div className='sidebar-footer'>
-                <p className='sidebar-email'>{userEmail}</p>
-                <p className='muted' style={{ fontSize: 11 }}>Realtime AI Workspace</p>
+                <div className='sidebar-user'>
+                    <div className='user-avatar'>
+                        {userEmail.charAt(0).toUpperCase()}
+                    </div>
+                    <div className='user-info'>
+                        <p className='sidebar-email'>{userEmail}</p>
+                        <p className='sidebar-status'>
+                            <span className='status-dot' />
+                            Online
+                        </p>
+                    </div>
+                </div>
             </div>
         </aside>
     )

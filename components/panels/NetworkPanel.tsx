@@ -14,181 +14,224 @@ type NetworkPanelProps = {
     results: Array<{ label: string; data: unknown; at: string }>
 }
 
-function renderConnections(data: unknown) {
-    if (!data || typeof data !== 'object') return null
-    const obj = data as Record<string, unknown>
-    const result = typeof obj.result === 'object' && obj.result !== null ? obj.result as Record<string, unknown> : null
+const str = (v: unknown) => (v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v))
+const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {})
 
-    const fromNetworkResult = result
-        ? [
-            ...(Array.isArray(result.alumni_matches) ? result.alumni_matches : []),
-            ...(Array.isArray(result.location_matches) ? result.location_matches : []),
-            ...(Array.isArray(result.company_matches) ? result.company_matches : []),
-        ] as Array<Record<string, unknown>>
-        : []
+/* ── Person Card ── */
+function PersonCard({ person }: { person: Record<string, unknown> }) {
+    const [expanded, setExpanded] = useState(false)
+    const name = str(person.name || person.full_name)
+    const title = str(person.title || person.role || person.position)
+    const company = str(person.company || person.current_company)
+    const category = str(person.category || person.connection_type || '')
+    const connectionStrength = str(person.connection_strength || person.relevance_score || '')
+    const outreach = str(person.outreach_message || person.suggested_outreach || '')
+    const reason = str(person.reason || person.why_relevant || '')
 
-    const profiles = fromNetworkResult.length > 0
-        ? fromNetworkResult
-        : Array.isArray(obj.profiles) ? obj.profiles as Array<Record<string, unknown>>
-            : Array.isArray(obj.connections) ? obj.connections as Array<Record<string, unknown>>
-                : []
-
-    if (profiles.length === 0) return null
+    const categoryColors: Record<string, string> = {
+        alumni: 'var(--blue)',
+        recruiter: 'var(--green)',
+        employee: 'var(--accent)',
+        mutual: 'var(--purple)',
+        hiring_manager: 'var(--yellow)',
+    }
+    const catColor = categoryColors[category.toLowerCase().replace(/\s+/g, '_')] || 'var(--text-2)'
 
     return (
-        <div className='result-stack' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px', marginTop: '16px' }}>
-            {profiles.map((p, i) => {
-                const name = String(p.name || p.full_name || `Connection ${i + 1}`)
-                const initials = name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
-                const roleText = String(p.title || p.role || p.headline || '')
-                const companyText = p.company || p.company_match
-                const linkedinUrl = p.linkedin_url || p.profile_url
-                const outreach = p.outreach_message || p.outreach_draft
-
-                // Color coding tags
-                const tagColor = p.category === 'alumni' ? 'var(--blue)' : p.category === 'location' ? 'var(--green)' : 'var(--accent)'
-
-                return (
-                    <div key={i} className='person-card' style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '20px', transition: 'transform 0.2s', cursor: 'default' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-                        <div className='person-card-row' style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <div className='person-card-avatar' style={{ width: 48, height: 48, borderRadius: '50%', background: `linear-gradient(135deg, ${tagColor}, rgba(255,255,255,0.1))`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                                {initials}
-                            </div>
-                            <div>
-                                <div className='person-card-name' style={{ fontWeight: 600, fontSize: '16px', color: '#fff' }}>{name}</div>
-                                <div className='person-card-role' style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px', lineHeight: 1.4 }}>
-                                    {roleText}{companyText ? <span> - <strong style={{ color: 'var(--text-bright)' }}>{String(companyText)}</strong></span> : ''}
-                                </div>
-                            </div>
+        <div className='dossier-item' style={{ borderLeft: `3px solid ${catColor}`, padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: `color-mix(in srgb, ${catColor} 18%, transparent)`, border: `1px solid color-mix(in srgb, ${catColor} 30%, transparent)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 700, color: catColor, flexShrink: 0 }}>
+                            {name.charAt(0).toUpperCase()}
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px' }}>
-                            {!!p.category && <span className='chip' style={{ background: `${tagColor}22`, color: tagColor, border: `1px solid ${tagColor}44`, padding: '4px 10px', borderRadius: '12px', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>{String(p.category)}</span>}
-                            {!!p.connection_type && <span className='chip' style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '12px', fontSize: '11px' }}>{String(p.connection_type)}</span>}
-                            {!!p.experience_years && <span className='chip' style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '12px', fontSize: '11px' }}>{String(p.experience_years)}y exp</span>}
-                            {!!linkedinUrl && (
-                                <a href={String(linkedinUrl)} target='_blank' rel='noreferrer' className='chip' style={{ color: '#0a66c2', background: 'rgba(10, 102, 194, 0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, textDecoration: 'none' }}>
-                                    LinkedIn ↗
-                                </a>
-                            )}
+                        <div>
+                            <div style={{ fontWeight: 700, fontSize: '14px' }}>{name}</div>
+                            {title && <div style={{ color: 'var(--muted)', fontSize: '12px' }}>{title}{company ? ` at ${company}` : ''}</div>}
                         </div>
-                        {!!outreach && (
-                            <div className='outreach-preview' style={{ marginTop: '20px', background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '8px', borderLeft: '3px solid var(--accent)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--accent)', fontWeight: 600 }}>Suggested Outreach</span>
-                                    <button onClick={() => navigator.clipboard.writeText(String(outreach))} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px' }}>📋 Copy</button>
-                                </div>
-                                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.5, color: 'var(--text-bright)', whiteSpace: 'pre-wrap' }}>&quot;{String(outreach)}&quot;</p>
-                            </div>
-                        )}
                     </div>
-                )
-            })}
+                </div>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+                    {category && <span className='pill' style={{ background: `color-mix(in srgb, ${catColor} 10%, transparent)`, color: catColor, border: `1px solid color-mix(in srgb, ${catColor} 25%, transparent)`, fontSize: '10px', textTransform: 'capitalize' }}>{category.replace(/_/g, ' ')}</span>}
+                    {connectionStrength && <span className='pill accent' style={{ fontSize: '10px' }}>{connectionStrength}</span>}
+                </div>
+            </div>
+
+            {reason && <p style={{ margin: '10px 0 0', fontSize: '12.5px', color: 'var(--text-2)', lineHeight: 1.55 }}>💡 {reason}</p>}
+
+            {outreach && (
+                <div style={{ marginTop: '12px' }}>
+                    <button onClick={() => setExpanded(!expanded)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--accent-soft)', fontSize: '12px', fontWeight: 600, padding: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {expanded ? '▾' : '▸'} Outreach Template
+                    </button>
+                    {expanded && (
+                        <div style={{ marginTop: '8px', background: 'rgba(255, 138, 31, .04)', border: '1px solid var(--accent-border)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', fontSize: '12.5px', lineHeight: 1.65, color: 'var(--text-2)', whiteSpace: 'pre-wrap', animation: 'slideDownFade .3s ease-out' }}>
+                            {outreach}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     )
 }
 
+/* ── Connection Results ── */
+function ConnectionResults({ data }: { data: unknown }) {
+    const d = obj(data)
+    const connections = arr(d.connections || d.results || d.people || d.network_contacts || data) as Array<Record<string, unknown>>
+
+    if (connections.length === 0) {
+        return (
+            <div className='empty-state' style={{ padding: '32px' }}>
+                <div className='empty-icon'>🔗</div>
+                <p>No connections found. Try adjusting your search parameters.</p>
+            </div>
+        )
+    }
+
+    // Group by category
+    const grouped: Record<string, Array<Record<string, unknown>>> = {}
+    connections.forEach(c => {
+        const cat = str(c.category || c.connection_type || 'Other')
+        if (!grouped[cat]) grouped[cat] = []
+        grouped[cat].push(c)
+    })
+
+    const totalCount = connections.length
+    const summary = str(d.summary || d.search_summary || '')
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Summary banner */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 'var(--radius)', padding: '14px 18px' }}>
+                <div style={{ fontSize: '24px' }}>🤝</div>
+                <div>
+                    <div style={{ fontWeight: 700, fontSize: '14px' }}>Found {totalCount} connection{totalCount !== 1 ? 's' : ''}</div>
+                    {summary && <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: 'var(--text-2)' }}>{summary}</p>}
+                </div>
+            </div>
+
+            {/* Grouped connections */}
+            {Object.entries(grouped).map(([category, people]) => (
+                <div key={category}>
+                    <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--muted)', fontWeight: 700, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {category.replace(/_/g, ' ')}
+                        <span style={{ background: 'var(--surface-2)', padding: '2px 8px', borderRadius: '99px', fontSize: '10px' }}>{people.length}</span>
+                    </div>
+                    <div className='result-stack'>
+                        {people.map((p, i) => <PersonCard key={i} person={p} />)}
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+/* ════════════════════════════════
+   Main Export
+   ════════════════════════════════ */
 export function NetworkPanel({ token, companyName, setCompanyName, roleName, setRoleName, loading, runAction, results }: NetworkPanelProps) {
-    const [alumni, setAlumni] = useState(true)
-    const [location, setLocation] = useState(true)
-    const [pastCompanies, setPastCompanies] = useState(true)
+    const [includeAlumni, setIncludeAlumni] = useState(true)
+    const [includeLocation, setIncludeLocation] = useState(false)
+    const [includePast, setIncludePast] = useState(false)
     const [generateOutreach, setGenerateOutreach] = useState(true)
-    const [maxResults, setMaxResults] = useState(5)
+    const [maxPerCategory, setMaxPerCategory] = useState(5)
 
     return (
         <div className='action-grid' style={{ gap: '24px' }}>
             <div className='section-header'>
-                <h3>🤝 Referral Connections</h3>
-                <p className='muted' style={{ margin: '4px 0 0', fontSize: '14px' }}>Find strategic internal connections and generate hyper-personalized outreach messages.</p>
+                <h3>🤝 Smart Referral Finder</h3>
+                <p className='muted' style={{ margin: '4px 0 0', fontSize: '14px' }}>Find warm connections, generate personalized outreach, and navigate the hidden job market.</p>
             </div>
 
-            <div className='field-row' style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) minmax(200px, 1fr)', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Target Company *</label>
-                    <input className='input' value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder='e.g. OpenAI' />
+            {/* Target inputs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className='form-field'>
+                    <label>Target Company *</label>
+                    <input className='input' value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder='e.g. Google, Meta, Stripe' />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Your Target Title</label>
-                    <input className='input' value={roleName} onChange={(e) => setRoleName(e.target.value)} placeholder='e.g. Product Manager' />
+                <div className='form-field'>
+                    <label>Target Role</label>
+                    <input className='input' value={roleName} onChange={e => setRoleName(e.target.value)} placeholder='e.g. Senior Backend Engineer' />
                 </div>
             </div>
 
-            {/* Customization Options */}
-            <div style={{ background: 'rgba(0,0,0,0.15)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <h5 style={{ margin: '0 0 16px 0', fontSize: '13px', color: 'var(--text-bright)' }}>Search Filters</h5>
+            {/* Options panel */}
+            <div className='panel-surface' style={{ padding: '20px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>Search Options</div>
 
-                <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                        <input type="checkbox" checked={alumni} onChange={(e) => setAlumni(e.target.checked)} style={{ accentColor: 'var(--accent)' }} />
-                        University Alumni
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '14px 24px' }}>
+                    <label className='toggle-row' onClick={() => setIncludeAlumni(!includeAlumni)}>
+                        <div className={`toggle-switch ${includeAlumni ? 'on' : ''}`} />
+                        Include Alumni
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                        <input type="checkbox" checked={location} onChange={(e) => setLocation(e.target.checked)} style={{ accentColor: 'var(--accent)' }} />
-                        Same Location
+                    <label className='toggle-row' onClick={() => setIncludeLocation(!includeLocation)}>
+                        <div className={`toggle-switch ${includeLocation ? 'on' : ''}`} />
+                        Include Location
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                        <input type="checkbox" checked={pastCompanies} onChange={(e) => setPastCompanies(e.target.checked)} style={{ accentColor: 'var(--accent)' }} />
-                        Past Colleagues
+                    <label className='toggle-row' onClick={() => setIncludePast(!includePast)}>
+                        <div className={`toggle-switch ${includePast ? 'on' : ''}`} />
+                        Past Companies
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                        <input type="checkbox" checked={generateOutreach} onChange={(e) => setGenerateOutreach(e.target.checked)} style={{ accentColor: 'var(--accent)' }} />
+                    <label className='toggle-row' onClick={() => setGenerateOutreach(!generateOutreach)}>
+                        <div className={`toggle-switch ${generateOutreach ? 'on' : ''}`} />
                         Generate Outreach
                     </label>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <label style={{ fontSize: '13px', width: '150px' }}>Max Results / Category:</label>
-                    <input type="range" min="1" max="10" value={maxResults} onChange={(e) => setMaxResults(parseInt(e.target.value))} style={{ flex: 1, accentColor: 'var(--accent)' }} />
-                    <span style={{ fontSize: '14px', fontWeight: 'bold', width: '20px', textAlign: 'right' }}>{maxResults}</span>
+                <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)', marginBottom: '10px' }}>Max Per Category</div>
+                    <div className='range-row'>
+                        <input type='range' min={1} max={20} value={maxPerCategory} onChange={e => setMaxPerCategory(Number(e.target.value))} />
+                        <span className='range-value'>{maxPerCategory}</span>
+                    </div>
                 </div>
             </div>
 
-            <div className='field-row'>
-                <button
-                    className='button primary'
-                    disabled={loading || !companyName}
-                    onClick={() =>
-                        runAction('network', 'Find Connections', () =>
-                            apiRequest('/api/v1/network/find-connections', {
-                                method: 'POST', token,
-                                body: {
-                                    company: companyName,
-                                    include_alumni: alumni,
-                                    include_location: location,
-                                    include_past_companies: pastCompanies,
-                                    generate_outreach: generateOutreach,
-                                    max_per_category: maxResults
-                                },
-                            })
-                        )
-                    }
-                    style={{ flex: 1, padding: '12px', fontSize: '15px' }}
-                >
-                    Find Referrals
-                </button>
-            </div>
+            {/* Actions */}
+            <button
+                className='button primary'
+                disabled={loading || !companyName}
+                onClick={() =>
+                    runAction('network', 'Find Connections', () =>
+                        apiRequest('/api/v1/network/find-connections', {
+                            method: 'POST', token,
+                            body: {
+                                company: companyName,
+                                role: roleName || undefined,
+                                include_alumni: includeAlumni,
+                                include_location: includeLocation,
+                                include_past_companies: includePast,
+                                generate_outreach: generateOutreach,
+                                max_per_category: maxPerCategory,
+                            }
+                        })
+                    )
+                }
+                style={{ padding: '12px' }}
+            >
+                🔍 Find Connections
+            </button>
 
+            {/* Results */}
             {results.length === 0 ? (
-                <div className='empty-state' style={{ padding: '48px 24px' }}>
-                    <div className='empty-icon' style={{ opacity: 0.5, transform: 'scale(1.2)' }}>🤝</div>
-                    <p style={{ marginTop: '16px', fontSize: '15px' }}>Search for warm connections to request referrals.</p>
+                <div className='empty-state'>
+                    <div className='empty-icon'>🌐</div>
+                    <p>Enter a company name to discover warm connections and insider referral paths.</p>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {results.map((entry) => (
                         <div key={`${entry.label}_${entry.at}`} style={{ animation: 'slideDownFade 0.4s ease-out' }}>
-                            <div className='result-head' style={{ marginBottom: '16px' }}>
+                            <div className='result-head'>
                                 <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--green)' }}></span>
+                                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: entry.label.startsWith('ERROR') ? 'var(--red)' : 'var(--green)' }} />
                                     {entry.label}
                                 </h4>
                                 <span className='muted' style={{ fontSize: 11 }}>{new Date(entry.at).toLocaleTimeString()}</span>
                             </div>
-                            {renderConnections(entry.data) || (
-                                <details className='details-block' open>
-                                    <summary>View Raw Response</summary>
-                                    <pre className='code-block'>{JSON.stringify(entry.data, null, 2)}</pre>
-                                </details>
-                            )}
+                            <ConnectionResults data={entry.data} />
                         </div>
                     ))}
                 </div>

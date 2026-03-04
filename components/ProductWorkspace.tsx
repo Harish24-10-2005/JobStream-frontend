@@ -37,6 +37,22 @@ type CreditsResponse = {
   tokens_remaining?: number
 }
 
+type WorkspacePrefs = {
+  accent: 'ember' | 'ocean' | 'emerald'
+  density: 'comfortable' | 'compact'
+  radius: 'soft' | 'sharp'
+  motion: 'full' | 'reduced'
+  intentMode: 'balanced' | 'aggressive' | 'conservative'
+}
+
+const DEFAULT_PREFS: WorkspacePrefs = {
+  accent: 'ember',
+  density: 'comfortable',
+  radius: 'soft',
+  motion: 'full',
+  intentMode: 'balanced'
+}
+
 export default function ProductWorkspace({ token, email, onSignOut }: { token: string; email: string; onSignOut: () => void }) {
   const [panel, setPanel] = useState<PanelKey>('pipeline')
   const [roleName, setRoleName] = useState('')
@@ -45,6 +61,7 @@ export default function ProductWorkspace({ token, email, onSignOut }: { token: s
   const [loading, setLoading] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
   const [profileCompletion, setProfileCompletion] = useState<ProfileCompletion | null>(null)
+  const [backendDown, setBackendDown] = useState(false)
   const [onboardingName, setOnboardingName] = useState('')
   const [onboardingLocation, setOnboardingLocation] = useState('')
   const [onboardingSummary, setOnboardingSummary] = useState('')
@@ -63,6 +80,7 @@ export default function ProductWorkspace({ token, email, onSignOut }: { token: s
   // Credit state
   const [creditQueries, setCreditQueries] = useState<string | null>(null)
   const [creditTokens, setCreditTokens] = useState<string | null>(null)
+  const [prefs, setPrefs] = useState<WorkspacePrefs>(DEFAULT_PREFS)
 
   const applyCreditHeaders = useCallback((headers: Headers) => {
     const queryRemaining = headers.get('X-Credits-Queries-Remaining')
@@ -85,15 +103,17 @@ export default function ProductWorkspace({ token, email, onSignOut }: { token: s
   const refreshProfileCompletion = useCallback(async () => {
     const res = await apiRequest<ProfileCompletion>('/api/v1/user/profile/completion', { token })
     setProfileCompletion(res.data)
+    setBackendDown(false)
   }, [token])
 
   useEffect(() => {
     let mounted = true
       ; (async () => {
         try {
-          await Promise.all([refreshCredits(), refreshProfileCompletion()])
+          await Promise.allSettled([refreshCredits(), refreshProfileCompletion()])
+          if (mounted) setBackendDown(false)
         } catch {
-          // API errors are handled by individual panels; keep shell resilient.
+          if (mounted) setBackendDown(true)
         } finally {
           if (mounted) setProfileLoading(false)
         }
@@ -102,6 +122,39 @@ export default function ProductWorkspace({ token, email, onSignOut }: { token: s
       mounted = false
     }
   }, [refreshCredits, refreshProfileCompletion])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const saved = window.localStorage.getItem('jobstream.workspace.prefs')
+      if (!saved) return
+      const parsed = JSON.parse(saved) as Partial<WorkspacePrefs>
+      setPrefs((prev) => ({ ...prev, ...parsed }))
+    } catch {
+      // Keep defaults when local storage is unavailable.
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('jobstream.workspace.prefs', JSON.stringify(prefs))
+
+    const root = document.documentElement
+    root.setAttribute('data-density', prefs.density)
+    root.setAttribute('data-radius', prefs.radius)
+    root.setAttribute('data-motion', prefs.motion)
+
+    const accentMap = {
+      ember: { accent: '#ff8a1f', soft: '#ffb46d', bg: 'rgba(255, 138, 31, .12)', border: 'rgba(255, 138, 31, .45)' },
+      ocean: { accent: '#2ea8ff', soft: '#84d2ff', bg: 'rgba(46, 168, 255, .14)', border: 'rgba(46, 168, 255, .45)' },
+      emerald: { accent: '#13b981', soft: '#77e7c3', bg: 'rgba(19, 185, 129, .14)', border: 'rgba(19, 185, 129, .45)' }
+    } as const
+    const tokens = accentMap[prefs.accent]
+    root.style.setProperty('--accent', tokens.accent)
+    root.style.setProperty('--accent-soft', tokens.soft)
+    root.style.setProperty('--accent-bg', tokens.bg)
+    root.style.setProperty('--accent-border', tokens.border)
+  }, [prefs])
 
   // Generic action runner that stores results per-panel
   const runAction = useCallback(
@@ -225,6 +278,7 @@ export default function ProductWorkspace({ token, email, onSignOut }: { token: s
             wsReconnectCount={ws.reconnectCount}
             wsLastPongAt={ws.lastPongAt}
             onReconnectWs={ws.reconnect}
+            intentPreset={prefs.intentMode}
           />
         )
       case 'live':
@@ -253,17 +307,50 @@ export default function ProductWorkspace({ token, email, onSignOut }: { token: s
 
   if (profileLoading) {
     return (
-      <div className='workspace-shell'>
-        <div className='workspace-content'>
-          <div className='main-column'>
-            <p className='muted'>Loading workspace...</p>
-          </div>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg)',
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className='spinner' style={{ width: 32, height: 32, margin: '0 auto 16px', borderWidth: 3 }} />
+          <p style={{ color: 'var(--text-2)', fontWeight: 500, fontSize: 15 }}>Loading workspace...</p>
+          <p className='muted' style={{ fontSize: 12, marginTop: 4 }}>Connecting to AI services</p>
         </div>
       </div>
     )
   }
 
   if (!profileCompletion?.has_profile) {
+    // Backend unreachable and no cached profile — show an error, not the onboarding form
+    if (backendDown) {
+      return (
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bg)',
+        }}>
+          <div style={{ textAlign: 'center', maxWidth: 420, padding: 32 }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>⚡</div>
+            <h2 style={{ color: 'var(--text)', fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Backend Unavailable</h2>
+            <p style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+              Cannot reach the API server. Make sure the backend is running on <code style={{ color: 'var(--accent)' }}>localhost:8000</code> and try again.
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button className='button primary' onClick={() => { setProfileLoading(true); setBackendDown(false); refreshProfileCompletion().catch(() => { setBackendDown(true) }).finally(() => setProfileLoading(false)) }}>
+                Retry Connection
+              </button>
+              <button className='button secondary' onClick={onSignOut}>Sign Out</button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <ProfileCompletionPanel
         onboardingName={onboardingName}
@@ -289,6 +376,8 @@ export default function ProductWorkspace({ token, email, onSignOut }: { token: s
           wsConnected={ws.connected}
           creditQueries={creditQueries}
           creditTokens={creditTokens}
+          prefs={prefs}
+          onPrefsChange={setPrefs}
           onRefresh={handleRefresh}
           onSignOut={onSignOut}
         />

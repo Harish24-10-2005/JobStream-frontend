@@ -24,3 +24,12 @@ npm run dev
 - `NEXT_PUBLIC_WS_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+## Docker (separate frontend deploy)
+
+```bash
+cd frontend
+cp .env.production.example .env
+# set NEXT_PUBLIC_* values for your deployed backend/frontend URLs
+docker compose -f docker-compose.frontend.yml up --build -d
+```

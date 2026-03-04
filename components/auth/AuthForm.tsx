@@ -56,6 +56,13 @@ export function AuthForm() {
 
     return (
         <div className="auth-form-container">
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <p style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, margin: 0 }}>Welcome back</p>
+                <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginTop: 4 }}>
+                    Sign in to your workspace
+                </p>
+            </div>
+
             <div className="auth-tabs">
                 <button
                     className={`auth-tab ${mode === 'signin' ? 'active' : ''}`}
@@ -132,8 +139,12 @@ export function AuthForm() {
                     onClick={handleMagicLink}
                     disabled={isSubmitting || !email}
                 >
-                    Send Magic Link
+                    ✦ Send Magic Link
                 </button>
+
+                <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--muted)', marginTop: 8, opacity: 0.7 }}>
+                    🔒 End-to-end encrypted · SOC2 compliant
+                </p>
             </form>
         </div>
     )

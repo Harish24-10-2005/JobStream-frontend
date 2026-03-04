@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { apiRequest, ApiResponse } from '@/lib/api-client'
+import { PrettyResponse } from '@/components/common/PrettyResponse'
 
 /* ── types ── */
 type PipelineStatus = {
@@ -31,6 +32,7 @@ type PipelinePanelProps = {
     wsReconnectCount: number
     wsLastPongAt: string | null
     onReconnectWs: () => void
+    intentPreset: 'balanced' | 'aggressive' | 'conservative'
 }
 
 type ProfileReadiness = {
@@ -76,11 +78,38 @@ const actionIcon = (type: string) => {
 
 const isNoiseEvent = (type: string) => type === 'connected' || type === 'ping' || type === 'pong'
 
+const intentProfiles = {
+    balanced: {
+        autoApply: true,
+        minScore: 70,
+        maxJobs: 10,
+        resume: 'auto' as const,
+        cover: 'auto' as const,
+        company: 'auto' as const,
+    },
+    aggressive: {
+        autoApply: true,
+        minScore: 60,
+        maxJobs: 20,
+        resume: 'off' as const,
+        cover: 'off' as const,
+        company: 'off' as const,
+    },
+    conservative: {
+        autoApply: false,
+        minScore: 82,
+        maxJobs: 6,
+        resume: 'on' as const,
+        cover: 'on' as const,
+        company: 'on' as const,
+    },
+}
+
 export function PipelinePanel({
     token, sessionId, loading, runAction, results,
     wsConnected, wsEvents, screenshot, screenshots,
     pendingHitl, onResolveHitl, onSendChat, onSessionChange,
-    wsError, wsReconnectCount, wsLastPongAt, onReconnectWs,
+    wsError, wsReconnectCount, wsLastPongAt, onReconnectWs, intentPreset,
 }: PipelinePanelProps) {
     const [query, setQuery] = useState('')
     const [location, setLocation] = useState('Remote')
@@ -102,6 +131,16 @@ export function PipelinePanel({
     const chatEndRef = useRef<HTMLDivElement>(null)
     const displayImg = activeThumb >= 0 ? screenshots[activeThumb] : screenshot
     const timelineEvents = wsEvents.filter((ev) => !isNoiseEvent(ev.type))
+
+    useEffect(() => {
+        const preset = intentProfiles[intentPreset]
+        setAutoApply(preset.autoApply)
+        setMinScore(preset.minScore)
+        setMaxJobs(preset.maxJobs)
+        setForceResumeTailoring(preset.resume)
+        setForceCoverLetter(preset.cover)
+        setForceCompanyResearch(preset.company)
+    }, [intentPreset])
 
     // Auto-scroll
     useEffect(() => {
@@ -240,20 +279,19 @@ export function PipelinePanel({
                         <div className='agent-welcome'>
                             <div className='agent-welcome-icon'>🔄</div>
                             <h3>AI Pipeline</h3>
-                            <p>Run the full autonomous pipeline: Scout → Analyst → Resume → Cover Letter → Apply. Configure and launch below.</p>
+                            <p>Configure and launch the full autonomous pipeline — Scout, Analyst, Resume, Cover Letter, and Apply — all in one run.</p>
 
                             <div className='agent-start-card'>
                                 {readiness && !readiness.ready && (
-                                    <div className='agent-sys-msg error' style={{ marginBottom: 10 }}>
-                                        Setup required before launch. Missing: {readiness.missing_requirements.join(', ')}
+                                    <div className='agent-sys-msg error' style={{ marginBottom: 14 }}>
+                                        <strong>Setup required before launch</strong>
                                         <div className='muted' style={{ fontSize: 12, marginTop: 4 }}>
-                                            Completion: {readiness.completion.completion_percent}%.
-                                            Upload resume in Resume Studio, then add skills and at least one of education/experience/projects.
+                                            Missing: {readiness.missing_requirements.join(', ')} · {readiness.completion.completion_percent}% complete
                                         </div>
                                     </div>
                                 )}
                                 <div className='agent-start-field'>
-                                    <label style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>Job Query</label>
+                                    <label className='pipeline-label'>Job Query</label>
                                     <input
                                         className='agent-url-input'
                                         value={query}
@@ -263,8 +301,8 @@ export function PipelinePanel({
                                     />
                                 </div>
 
-                                <div className='agent-start-field' style={{ marginTop: 10 }}>
-                                    <label style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>Location</label>
+                                <div className='agent-start-field'>
+                                    <label className='pipeline-label'>Location</label>
                                     <input
                                         className='agent-url-input'
                                         value={location}
@@ -277,58 +315,56 @@ export function PipelinePanel({
                                     <label className='agent-draft-toggle'>
                                         <input type='checkbox' checked={autoApply} onChange={(e) => setAutoApply(e.target.checked)} />
                                         <span>Auto Apply</span>
-                                        <span className='muted' style={{ fontSize: 11 }}>Automatically submit applications</span>
+                                        <span className='muted' style={{ fontSize: 11 }}>Submit automatically</span>
                                     </label>
                                     <div className='pipeline-score-field'>
-                                        <label style={{ fontSize: 12, color: 'var(--muted)' }}>Min Match Score</label>
+                                        <label className='pipeline-label' style={{ marginBottom: 0 }}>Min Score</label>
                                         <input
                                             type='number' min={0} max={100} value={minScore}
                                             onChange={(e) => setMinScore(Number(e.target.value))}
-                                            className='agent-url-input'
-                                            style={{ width: 80, textAlign: 'center', padding: '6px 8px' }}
+                                            className='agent-url-input pipeline-number-input'
+                                        />
+                                    </div>
+                                    <div className='pipeline-score-field'>
+                                        <label className='pipeline-label' style={{ marginBottom: 0 }}>Max Jobs</label>
+                                        <input
+                                            type='number' min={1} max={50} value={maxJobs}
+                                            onChange={(e) => setMaxJobs(Number(e.target.value || 10))}
+                                            className='agent-url-input pipeline-number-input'
                                         />
                                     </div>
                                 </div>
 
-                                <div className='pipeline-config-row' style={{ marginTop: 8 }}>
-                                    <div className='pipeline-score-field'>
-                                        <label style={{ fontSize: 12, color: 'var(--muted)' }}>Max Jobs</label>
-                                        <input
-                                            type='number' min={1} max={50} value={maxJobs}
-                                            onChange={(e) => setMaxJobs(Number(e.target.value || 10))}
-                                            className='agent-url-input'
-                                            style={{ width: 80, textAlign: 'center', padding: '6px 8px' }}
-                                        />
-                                    </div>
+                                <div className='pipeline-config-row'>
                                     <button
                                         className='button'
                                         style={{ fontSize: 12 }}
                                         onClick={() => setAdvancedOpen((v) => !v)}
                                     >
-                                        {advancedOpen ? 'Hide Advanced' : 'Advanced Controls'}
+                                        {advancedOpen ? '▾ Hide Advanced' : '▸ Advanced Controls'}
                                     </button>
                                 </div>
 
                                 {advancedOpen && (
-                                    <div className='pipeline-config-row' style={{ marginTop: 8, gap: 10, alignItems: 'flex-start' }}>
-                                        <div className='pipeline-score-field'>
-                                            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Resume Tailor</label>
+                                    <div className='pipeline-config-row' style={{ gap: 12, alignItems: 'flex-start' }}>
+                                        <div className='pipeline-score-field' style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                                            <label className='pipeline-label'>Resume Tailor</label>
                                             <select className='agent-url-input' value={forceResumeTailoring} onChange={(e) => setForceResumeTailoring(e.target.value as 'auto' | 'on' | 'off')}>
                                                 <option value='auto'>Auto</option>
                                                 <option value='on'>Force On</option>
                                                 <option value='off'>Force Off</option>
                                             </select>
                                         </div>
-                                        <div className='pipeline-score-field'>
-                                            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Cover Letter</label>
+                                        <div className='pipeline-score-field' style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                                            <label className='pipeline-label'>Cover Letter</label>
                                             <select className='agent-url-input' value={forceCoverLetter} onChange={(e) => setForceCoverLetter(e.target.value as 'auto' | 'on' | 'off')}>
                                                 <option value='auto'>Auto</option>
                                                 <option value='on'>Force On</option>
                                                 <option value='off'>Force Off</option>
                                             </select>
                                         </div>
-                                        <div className='pipeline-score-field'>
-                                            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Company Research</label>
+                                        <div className='pipeline-score-field' style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                                            <label className='pipeline-label'>Company Research</label>
                                             <select className='agent-url-input' value={forceCompanyResearch} onChange={(e) => setForceCompanyResearch(e.target.value as 'auto' | 'on' | 'off')}>
                                                 <option value='auto'>Auto</option>
                                                 <option value='on'>Force On</option>
@@ -338,7 +374,7 @@ export function PipelinePanel({
                                     </div>
                                 )}
 
-                                <div className='agent-start-options' style={{ marginTop: 12 }}>
+                                <div className='agent-start-options'>
                                     <button
                                         className='agent-start-btn'
                                         disabled={!query.trim() || loading || (readiness ? !readiness.ready : false)}
@@ -363,14 +399,14 @@ export function PipelinePanel({
                         <>
                             {!pipelineRunning && (
                                 <>
-                                <div className='agent-start-card' style={{ marginBottom: 10 }}>
+                                <div className='agent-start-card' style={{ marginBottom: 14 }}>
                                     {readiness && !readiness.ready && (
-                                        <div className='agent-sys-msg error' style={{ marginBottom: 10 }}>
-                                            Setup required before launch. Missing: {readiness.missing_requirements.join(', ')}
+                                        <div className='agent-sys-msg error' style={{ marginBottom: 14 }}>
+                                            <strong>Setup required.</strong> Missing: {readiness.missing_requirements.join(', ')}
                                         </div>
                                     )}
                                     <div className='agent-start-field'>
-                                        <label style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>Job Query</label>
+                                        <label className='pipeline-label'>Job Query</label>
                                         <input
                                             className='agent-url-input'
                                             value={query}
@@ -379,8 +415,8 @@ export function PipelinePanel({
                                             onKeyDown={(e) => e.key === 'Enter' && handleStart()}
                                         />
                                     </div>
-                                    <div className='agent-start-field' style={{ marginTop: 10 }}>
-                                        <label style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>Location</label>
+                                    <div className='agent-start-field'>
+                                        <label className='pipeline-label'>Location</label>
                                         <input
                                             className='agent-url-input'
                                             value={location}
@@ -388,7 +424,7 @@ export function PipelinePanel({
                                             placeholder='Remote, San Francisco, etc.'
                                         />
                                     </div>
-                                    <div className='agent-start-options' style={{ marginTop: 10 }}>
+                                    <div className='agent-start-options'>
                                         <button className='agent-start-btn' disabled={!query.trim() || loading || (readiness ? !readiness.ready : false)} onClick={handleStart}>
                                             ▶ Launch Pipeline
                                         </button>
@@ -404,54 +440,6 @@ export function PipelinePanel({
                                         </button>
                                     </div>
                                 </div>
-
-                                <div className='pipeline-config-row' style={{ marginTop: 8 }}>
-                                    <div className='pipeline-score-field'>
-                                        <label style={{ fontSize: 12, color: 'var(--muted)' }}>Max Jobs</label>
-                                        <input
-                                            type='number' min={1} max={50} value={maxJobs}
-                                            onChange={(e) => setMaxJobs(Number(e.target.value || 10))}
-                                            className='agent-url-input'
-                                            style={{ width: 80, textAlign: 'center', padding: '6px 8px' }}
-                                        />
-                                    </div>
-                                    <button
-                                        className='button'
-                                        style={{ fontSize: 12 }}
-                                        onClick={() => setAdvancedOpen((v) => !v)}
-                                    >
-                                        {advancedOpen ? 'Hide Advanced' : 'Advanced Controls'}
-                                    </button>
-                                </div>
-
-                                {advancedOpen && (
-                                    <div className='pipeline-config-row' style={{ marginTop: 8, gap: 10, alignItems: 'flex-start' }}>
-                                        <div className='pipeline-score-field'>
-                                            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Resume Tailor</label>
-                                            <select className='agent-url-input' value={forceResumeTailoring} onChange={(e) => setForceResumeTailoring(e.target.value as 'auto' | 'on' | 'off')}>
-                                                <option value='auto'>Auto</option>
-                                                <option value='on'>Force On</option>
-                                                <option value='off'>Force Off</option>
-                                            </select>
-                                        </div>
-                                        <div className='pipeline-score-field'>
-                                            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Cover Letter</label>
-                                            <select className='agent-url-input' value={forceCoverLetter} onChange={(e) => setForceCoverLetter(e.target.value as 'auto' | 'on' | 'off')}>
-                                                <option value='auto'>Auto</option>
-                                                <option value='on'>Force On</option>
-                                                <option value='off'>Force Off</option>
-                                            </select>
-                                        </div>
-                                        <div className='pipeline-score-field'>
-                                            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Company Research</label>
-                                            <select className='agent-url-input' value={forceCompanyResearch} onChange={(e) => setForceCompanyResearch(e.target.value as 'auto' | 'on' | 'off')}>
-                                                <option value='auto'>Auto</option>
-                                                <option value='on'>Force On</option>
-                                                <option value='off'>Force Off</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                )}
                                 </>
                             )}
 
@@ -536,9 +524,9 @@ export function PipelinePanel({
                                     {showEventDetails && ev.raw && (
                                         <details style={{ marginTop: 6 }}>
                                             <summary style={{ cursor: 'pointer', fontSize: 12 }}>Event Data</summary>
-                                            <pre style={{ fontSize: 11, overflow: 'auto', maxHeight: 160, marginTop: 6 }}>
-                                                {JSON.stringify(ev.raw, null, 2)}
-                                            </pre>
+                                            <div style={{ marginTop: 6 }}>
+                                                <PrettyResponse data={ev.raw} compact />
+                                            </div>
                                         </details>
                                     )}
                                     <span className='agent-bubble-ts'>{TS(ev.ts)}</span>
@@ -586,9 +574,7 @@ export function PipelinePanel({
                                         <span className='agent-action-label'>{r.label}</span>
                                     </div>
                                     <div className='agent-bubble-content'>
-                                        <pre style={{ fontSize: 12, overflow: 'auto', maxHeight: 200 }}>
-                                            {JSON.stringify(r.data, null, 2)}
-                                        </pre>
+                                        <PrettyResponse data={r.data} compact />
                                     </div>
                                     <span className='agent-bubble-ts'>{TS(r.at)}</span>
                                 </div>
@@ -646,9 +632,9 @@ export function PipelinePanel({
                         </>
                     ) : (
                         <div className='agent-browser-empty'>
-                            <div className='agent-browser-empty-icon'>🔄</div>
-                            <p>Pipeline output will appear here</p>
-                            <p className='muted' style={{ fontSize: 12 }}>Launch the pipeline to see live agent screenshots</p>
+                            <div className='agent-browser-empty-icon'>�️</div>
+                            <p style={{ fontWeight: 600, fontSize: 14 }}>Pipeline Live View</p>
+                            <p className='muted' style={{ fontSize: 12.5, maxWidth: 280, lineHeight: 1.5 }}>Launch the pipeline to see real-time agent activity and screenshots</p>
                         </div>
                     )}
                 </div>
@@ -671,8 +657,8 @@ export function PipelinePanel({
                 {/* Agent steps tracker */}
                 <div className='agent-tasks-panel'>
                     <div className='agent-tasks-header'>
-                        <span>Agent Pipeline</span>
-                        {status && <span className='muted'>{status.progress}%</span>}
+                        <span>🔄 Agent Steps</span>
+                        {status && <span className='pill accent' style={{ fontSize: 11 }}>{status.progress}%</span>}
                     </div>
                     <ul className='agent-task-list'>
                         {agentSteps.map((step, i) => {

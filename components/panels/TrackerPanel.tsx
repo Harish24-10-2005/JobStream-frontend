@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { apiRequest, ApiResponse } from '@/lib/api-client'
+import { PrettyResponse } from '@/components/common/PrettyResponse'
 
 type TrackerPanelProps = {
     token: string
@@ -154,10 +155,7 @@ export function TrackerPanel({ token, roleName, setRoleName, companyName, setCom
                             <span className='muted' style={{ fontSize: 11 }}>{new Date(entry.at).toLocaleTimeString()}</span>
                         </div>
                         {renderTrackerData(entry.data) || (
-                            <details className='details-block' open>
-                                <summary>View Response</summary>
-                                <pre className='code-block'>{JSON.stringify(entry.data, null, 2)}</pre>
-                            </details>
+                            <PrettyResponse data={entry.data} />
                         )}
                     </div>
                 ))

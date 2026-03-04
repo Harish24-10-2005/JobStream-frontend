@@ -1,30 +1,21 @@
 'use client'
 
-import { useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import ProductWorkspace from '@/components/ProductWorkspace'
 import { AuthForm } from '@/components/auth/AuthForm'
 
 export default function HomePage() {
-  const { session, token, loading, error, signInWithEmail, signOut } = useAuth()
-  const [email, setEmail] = useState('')
-  const [signingIn, setSigningIn] = useState(false)
+  const { session, token, loading, signOut } = useAuth()
 
-  const authStatus = useMemo(() => {
-    if (loading) return 'Checking session...'
-    if (session) return `Signed in as ${session.user.email}`
-    return 'Not authenticated'
-  }, [loading, session])
-
-  const onOtpSignIn = async () => {
-    const candidate = email.trim()
-    if (!candidate) return
-    setSigningIn(true)
-    try {
-      await signInWithEmail(candidate)
-    } finally {
-      setSigningIn(false)
-    }
+  if (loading) {
+    return (
+      <main className='landing-page' style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className='spinner' style={{ width: 32, height: 32, margin: '0 auto 16px', borderWidth: 3 }} />
+          <p style={{ color: 'var(--text-2)', fontWeight: 500, fontSize: 15 }}>Checking session…</p>
+        </div>
+      </main>
+    )
   }
 
   if (session) {
@@ -43,11 +34,11 @@ export default function HomePage() {
           <a href='#security'>Resources</a>
           <a href='#pricing'>Pricing</a>
         </nav>
-        <button className='button primary'>Get Started</button>
+        <button className='button primary' style={{ padding: '10px 24px', borderRadius: '999px' }}>Get Started</button>
       </header>
 
       <section className='hero-shell'>
-        <p className='announce-banner'>We have massively upgraded our agent. Advanced HITL and live apply are now available.</p>
+        <p className='announce-banner'>✦ We have massively upgraded our agent — Advanced HITL and live apply are now available.</p>
         <h1 className='hero-title'>
           THE WAY AI
           <span>applies for jobs.</span>
@@ -57,7 +48,19 @@ export default function HomePage() {
           interface.
         </p>
 
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', margin: '32px 0 16px', flexWrap: 'wrap' }}>
+          {['Live Browser Agent', 'Human-in-the-Loop', 'ATS Optimization', 'AI Interview Prep'].map((feat) => (
+            <span key={feat} className='chip' style={{ fontSize: '12.5px', padding: '6px 14px' }}>
+              {feat}
+            </span>
+          ))}
+        </div>
+
         <AuthForm />
+
+        <p className='muted' style={{ marginTop: '24px', fontSize: '12px', opacity: 0.6 }}>
+          Trusted by 1,000+ job seekers — No credit card required
+        </p>
       </section>
     </main>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
@@ -8,32 +8,55 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const initialEventReceived = useRef(false)
 
   useEffect(() => {
     let active = true
 
-    async function bootstrap() {
+    // In @supabase/supabase-js v2.39+, onAuthStateChange fires an
+    // INITIAL_SESSION event synchronously when the listener is
+    // registered.  We use that as the primary session source—it
+    // handles localStorage recovery *and* URL-hash detection.
+    // getSession() is kept only as a safety-net fallback.
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, value) => {
+      if (!active) return
+
+      setSession(value)
+
+      // The INITIAL_SESSION event means the SDK has finished
+      // bootstrapping (localStorage + URL hash).  We can stop
+      // the loading spinner.
+      if (event === 'INITIAL_SESSION') {
+        initialEventReceived.current = true
+        setLoading(false)
+      }
+
+      // Also stop loading on explicit sign-in / sign-out if the
+      // INITIAL_SESSION event never fired (older SDK).
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        setLoading(false)
+      }
+    })
+
+    // Fallback: if the SDK is older and never fires INITIAL_SESSION,
+    // getSession() ensures we still resolve the loading state.
+    async function fallback() {
+      // Give onAuthStateChange ~200 ms to fire INITIAL_SESSION
+      await new Promise((r) => setTimeout(r, 250))
+      if (!active || initialEventReceived.current) return
       try {
         const { data } = await supabase.auth.getSession()
         if (active) {
           setSession(data.session || null)
         }
       } catch (e) {
-        if (active) {
-          setError((e as Error).message)
-        }
+        if (active) setError((e as Error).message)
       } finally {
-        if (active) {
-          setLoading(false)
-        }
+        if (active) setLoading(false)
       }
     }
-
-    bootstrap()
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, value) => {
-      setSession(value)
-    })
+    fallback()
 
     return () => {
       active = false

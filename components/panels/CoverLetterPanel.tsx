@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { apiRequest, ApiResponse } from '@/lib/api-client'
+import { PrettyResponse } from '@/components/common/PrettyResponse'
 
 type CoverLetterPanelProps = {
     token: string
@@ -113,24 +114,24 @@ export function CoverLetterPanel({ token, roleName, setRoleName, companyName, se
                 <p className='muted' style={{ margin: '4px 0 0', fontSize: '14px' }}>Generate hyper-personalized cover letters utilizing live hitl loops.</p>
             </div>
 
-            <div className='field-row' style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) minmax(200px, 1fr)', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Target Company *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className='form-field'>
+                    <label>Target Company *</label>
                     <input className='input' value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder='e.g. Acme Corp' />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Target Role *</label>
+                <div className='form-field'>
+                    <label>Target Role *</label>
                     <input className='input' value={roleName} onChange={(e) => setRoleName(e.target.value)} placeholder='e.g. Design Engineer' />
                 </div>
             </div>
 
-            <div className='field-row' style={{ display: 'grid', gridTemplateColumns: '1fr 150px', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Tech Stack / Key Skills (Comma separated)</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px', gap: '12px' }}>
+                <div className='form-field'>
+                    <label>Tech Stack / Key Skills (Comma separated)</label>
                     <input className='input' value={techStack} onChange={(e) => setTechStack(e.target.value)} placeholder='e.g. React, Node.js, AWS' />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Tone</label>
+                <div className='form-field'>
+                    <label>Tone</label>
                     <select className='select' value={tone} onChange={(e) => setTone(e.target.value)}>
                         <option value='professional'>Professional</option>
                         <option value='enthusiastic'>Enthusiastic</option>
@@ -140,11 +141,11 @@ export function CoverLetterPanel({ token, roleName, setRoleName, companyName, se
                 </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Job Description (Optional)</label>
+            <div className='form-field'>
+                <label>Job Description (Optional)</label>
                 <textarea
-                    className='input'
-                    style={{ minHeight: '80px', resize: 'vertical' }}
+                    className='textarea'
+                    style={{ minHeight: '80px' }}
                     value={jobDesc}
                     onChange={(e) => setJobDesc(e.target.value)}
                     placeholder='Paste job description to map your skills perfectly against their requirements...'
@@ -215,10 +216,7 @@ export function CoverLetterPanel({ token, roleName, setRoleName, companyName, se
                                 <span className='muted' style={{ fontSize: 11 }}>{new Date(entry.at).toLocaleTimeString()}</span>
                             </div>
                             {renderCoverLetter(entry.data) || (
-                                <details className='details-block' open>
-                                    <summary>View Raw Response</summary>
-                                    <pre className='code-block'>{JSON.stringify(entry.data, null, 2)}</pre>
-                                </details>
+                                <PrettyResponse data={entry.data} />
                             )}
                         </div>
                     ))}
