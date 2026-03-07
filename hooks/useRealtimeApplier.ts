@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { getWsBaseUrl } from '@/lib/runtime-urls'
 
 export type RealtimeEvent = {
   type: string
@@ -22,8 +23,6 @@ type ScreenshotFrame = {
   image: string
   timestamp: string
 }
-
-const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'
 
 function imageFromData(value: unknown): string | null {
   if (typeof value !== 'string' || !value) return null
@@ -47,7 +46,7 @@ export function useRealtimeApplier(token: string, sessionId: string) {
 
   const wsUrl = useMemo(() => {
     if (!sessionId) return ''
-    const url = new URL(`${WS_BASE_URL}/ws/${sessionId}`)
+    const url = new URL(`${getWsBaseUrl()}/ws/${sessionId}`)
     if (token) {
       url.searchParams.set('token', token)
     }

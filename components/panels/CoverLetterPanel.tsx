@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { apiRequest, ApiResponse } from '@/lib/api-client'
 import { PrettyResponse } from '@/components/common/PrettyResponse'
+import { getWsBaseUrl } from '@/lib/runtime-urls'
 
 type CoverLetterPanelProps = {
     token: string
@@ -51,8 +52,7 @@ export function CoverLetterPanel({ token, roleName, setRoleName, companyName, se
 
     const handleGenerate = () => {
         runAction('cover', 'Cover Letter', () => new Promise<ApiResponse<any>>((resolve) => {
-            const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'
-            const wsUrl = `${WS_BASE_URL}/api/v1/cover-letter/ws-generate?token=${token}`
+            const wsUrl = `${getWsBaseUrl()}/api/v1/cover-letter/ws-generate?token=${token}`
             const ws = new WebSocket(wsUrl)
             wsRef.current = ws
 

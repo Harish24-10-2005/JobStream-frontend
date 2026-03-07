@@ -92,6 +92,17 @@ export function useAuth() {
     }
   }
 
+  const resetPassword = async (email: string) => {
+    setError(null)
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/auth/reset-password`
+    })
+    if (resetError) {
+      setError(resetError.message)
+      throw resetError
+    }
+  }
+
   const signUp = async (email: string, password: string) => {
     setError(null)
     const { error: signUpError } = await supabase.auth.signUp({
@@ -116,6 +127,15 @@ export function useAuth() {
     }
   }
 
+  const updatePassword = async (password: string) => {
+    setError(null)
+    const { error: updateError } = await supabase.auth.updateUser({ password })
+    if (updateError) {
+      setError(updateError.message)
+      throw updateError
+    }
+  }
+
   return {
     session,
     token,
@@ -123,7 +143,9 @@ export function useAuth() {
     error,
     signInWithEmail,
     signInWithPassword,
+    resetPassword,
     signUp,
-    signOut
+    signOut,
+    updatePassword
   }
 }

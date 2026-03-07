@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-
-const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'
+import { getWsBaseUrl } from '@/lib/runtime-urls'
 
 export function usePipelineSocket(sessionId: string, token: string) {
   const [connected, setConnected] = useState(false)
@@ -12,7 +11,7 @@ export function usePipelineSocket(sessionId: string, token: string) {
 
   const wsUrl = useMemo(() => {
     if (!sessionId) return ''
-    const url = new URL(`${WS_BASE_URL}/api/v1/pipeline/ws/${sessionId}`)
+    const url = new URL(`${getWsBaseUrl()}/api/v1/pipeline/ws/${sessionId}`)
     if (token) {
       url.searchParams.set('token', token)
     }

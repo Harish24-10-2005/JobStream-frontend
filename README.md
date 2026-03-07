@@ -20,10 +20,13 @@ npm run dev
 
 ## Required env
 
-- `NEXT_PUBLIC_API_URL`
-- `NEXT_PUBLIC_WS_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_APP_URL`
+
+Optional:
+- `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL` (recommended for split-domain deployments)
+- `NEXT_PUBLIC_BACKEND_PORT` (used when API/WS URLs are not explicitly set)
 
 ## Docker (separate frontend deploy)
 

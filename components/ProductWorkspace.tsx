@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ApiError, apiRequest, ApiResponse } from '@/lib/api-client'
+import { getApiBaseUrl } from '@/lib/runtime-urls'
 import { useRealtimeApplier } from '@/hooks/useRealtimeApplier'
 import { Sidebar, type PanelKey } from './Sidebar'
 import { Topbar } from './Topbar'
@@ -338,7 +339,7 @@ export default function ProductWorkspace({ token, email, onSignOut }: { token: s
             <div style={{ fontSize: 40, marginBottom: 16 }}>⚡</div>
             <h2 style={{ color: 'var(--text)', fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Backend Unavailable</h2>
             <p style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-              Cannot reach the API server. Make sure the backend is running on <code style={{ color: 'var(--accent)' }}>localhost:8000</code> and try again.
+              Cannot reach the API server. Make sure the backend is running on <code style={{ color: 'var(--accent)' }}>{getApiBaseUrl()}</code> and try again.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
               <button className='button primary' onClick={() => { setProfileLoading(true); setBackendDown(false); refreshProfileCompletion().catch(() => { setBackendDown(true) }).finally(() => setProfileLoading(false)) }}>
