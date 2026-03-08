@@ -111,10 +111,9 @@ export default function ProductWorkspace({ token, email, onSignOut }: { token: s
     let mounted = true
       ; (async () => {
         try {
-          await Promise.allSettled([refreshCredits(), refreshProfileCompletion()])
-          if (mounted) setBackendDown(false)
-        } catch {
-          if (mounted) setBackendDown(true)
+          const results = await Promise.allSettled([refreshCredits(), refreshProfileCompletion()])
+          const hasFailure = results.some((result) => result.status === 'rejected')
+          if (mounted) setBackendDown(hasFailure)
         } finally {
           if (mounted) setProfileLoading(false)
         }
