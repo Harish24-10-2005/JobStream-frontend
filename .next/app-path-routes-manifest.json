@@ -1,0 +1,7 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/auth/callback/route": "/auth/callback",
+  "/page": "/",
+  "/test-dashboard/page": "/test-dashboard",
+  "/auth/reset-password/page": "/auth/reset-password"
+}
